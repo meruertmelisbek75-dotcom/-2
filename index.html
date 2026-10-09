@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>ММБ — Ночной Лес</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: radial-gradient(circle at center, #0f2027, #203a43, #2c5364);
+      color: #e0f2fe;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+      overflow-x: hidden;
+    }
+
+    /* Фоновые светящиеся пылинки */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(2px 2px at 20px 30px, #a7f3d0, rgba(0,0,0,0)),
+                  radial-gradient(2px 2px at 40px 70px, #6ee7b7, rgba(0,0,0,0)),
+                  radial-gradient(3px 3px at 80px 120px, #34d399, rgba(0,0,0,0)),
+                  radial-gradient(2px 2px at 150px 200px, #a7f3d0, rgba(0,0,0,0));
+      background-repeat: repeat;
+      background-size: 200px 200px;
+      opacity: 0.3;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 420px;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 10px;
+      text-align: center;
+      color: #a7f3d0;
+      text-shadow: 0 0 15px rgba(167, 243, 208, 0.5);
+      letter-spacing: 2px;
+    }
+
+    /* Экраны */
+    .screen {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(167, 243, 208, 0.2);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      text-align: center;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    p {
+      font-size: 1.1rem;
+      line-height: 1.5;
+      margin-bottom: 20px;
+      color: #cbd5e1;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #059669, #10b981);
+      color: #ffffff;
+      border: none;
+      padding: 14px 28px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.1s;
+      width: 80%;
+      max-width: 250px;
+    }
+
+    .btn:active {
+      transform: scale(0.96);
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+    }
+
+    /* Панель статистики */
+    .stats-bar {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      margin-bottom: 15px;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 10px 15px;
+      border-radius: 12px;
+      border: 1px solid rgba(167, 243, 208, 0.15);
+      font-size: 1rem;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .stat-val {
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: #6ee7b7;
+    }
+
+    /* Сетка карточек */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      width: 100%;
+      margin-bottom: 15px;
+    }
+
+    .card {
+      aspect-ratio: 1;
+      perspective: 1000px;
+      cursor: pointer;
+    }
+
+    .card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      text-align: center;
+      transition: transform 0.4s;
+      transform-style: preserve-3d;
+      border-radius: 12px;
+    }
+
+    .card.flipped .card-inner {
+      transform: rotateY(180deg);
+    }
+
+    .card-front, .card-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      border: 1px solid rgba(167, 243, 208, 0.2);
+    }
+
+    .card-front {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      color: #34d399;
+      font-size: 1.8rem;
+      box-shadow: inset 0 0 10px rgba(52, 211, 153, 0.1);
+    }
+
+    .card-back {
+      background: linear-gradient(135deg, #065f46, #047857);
+      transform: rotateY(180deg);
+      font-size: 2.2rem;
+      box-shadow: 0 0 15px rgba(52, 211, 153, 0.3);
+    }
+
+    .card.matched .card-back {
+      background: linear-gradient(135deg, #047857, #10b981);
+      border-color: #a7f3d0;
+    }
+
+    .result-title {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+
+    .win-title { color: #34d399; text-shadow: 0 0 10px rgba(52, 211, 153, 0.5); }
+    .lose-title { color: #f87171; text-shadow: 0 0 10px rgba(248, 113, 113, 0.5); }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>ММБ</h1>
+
+    <!-- Стартовый экран -->
+    <div id="start-screen" class="screen active">
+      <p>Добро пожаловать в таинственный ночной лес!<br><br>Найди все пары природный элементов, пока у тебя не закончились попытки.</p>
+      <button class="btn" onclick="startGame()">Начать игру</button>
+    </div>
+
+    <!-- Игровой экран -->
+    <div id="game-screen" class="screen">
+      <div class="stats-bar">
+        <div class="stat-item">
+          <span>Найдено пар</span>
+          <span id="pairs-val" class="stat-val">0 / 6</span>
+        </div>
+        <div class="stat-item">
+          <span>Осталось жизней</span>
+          <span id="lives-val" class="stat-val">8</span>
+        </div>
+      </div>
+
+      <div class="grid" id="grid"></div>
+
+      <button class="btn" style="padding: 10px; font-size: 1rem; width: 60%;" onclick="resetGame()">Перезапуск</button>
+    </div>
+
+    <!-- Экран результатов -->
+    <div id="end-screen" class="screen">
+      <div id="result-title" class="result-title"></div>
+      <p id="result-desc"></p>
+      <button class="btn" onclick="startGame()">Играть снова</button>
+    </div>
+  </div>
+
+  <script>
+    // Звуковой движок (Web Audio API)
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx;
+
+    function initAudio() {
+      if (!audioCtx) audioCtx = new AudioCtx();
+    }
+
+    function playSound(type) {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      const now = audioCtx.currentTime;
+
+      if (type === 'flip') {
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.exponentialRampToValueAtTime(500, now + 0.08);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+        osc.start(now);
+        osc.stop(now + 0.08);
+      } else if (type === 'match') {
+        osc.frequency.setValueAtTime(523.25, now); // C5
+        osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      } else if (type === 'win') {
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.setValueAtTime(554.37, now + 0.15);
+        osc.frequency.setValueAtTime(659.25, now + 0.3);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.5);
+        osc.start(now);
+        osc.stop(now + 0.5);
+      } else if (type === 'lose') {
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.linearRampToValueAtTime(150, now + 0.3);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      }
+    }
+
+    // Игровая логика
+    const symbols = ['🌲', '🌸', '🍄', '🌕', '🦉', '🦋'];
+    const MAX_LIVES = 8;
+    
+    let cardsData = [];
+    let flippedCards = [];
+    let matchedPairs = 0;
+    let lives = MAX_LIVES;
+    let isLock = false;
+
+    function showScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+    }
+
+    function startGame() {
+      initAudio();
+      matchedPairs = 0;
+      lives = MAX_LIVES;
+      flippedCards = [];
+      isLock = false;
+
+      document.getElementById('pairs-val').textContent = `0 / ${symbols.length}`;
+      document.getElementById('lives-val').textContent = lives;
+
+      // Создаем и перемешиваем колоду (по 2 карточки каждого символа)
+      cardsData = [...symbols, ...symbols].sort(() => Math.random() - 0.5);
+
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+
+      cardsData.forEach((symbol, index) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.dataset.index = index;
+        card.innerHTML = `
+          <div class="card-inner">
+            <div class="card-front">🌿</div>
+            <div class="card-back">${symbol}</div>
+          </div>
+        `;
+        card.addEventListener('click', () => handleCardClick(card, symbol));
+        grid.appendChild(card);
+      });
+
+      showScreen('game-screen');
+    }
+
+    function resetGame() {
+      startGame();
+    }
+
+    function handleCardClick(card, symbol) {
+      if (isLock || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+
+      playSound('flip');
+      card.classList.add('flipped');
+      flippedCards.push({ card, symbol });
+
+      if (flippedCards.length === 2) {
+        checkMatch();
+      }
+    }
+
+    function checkMatch() {
+      isLock = true;
+      const [first, second] = flippedCards;
+
+      if (first.symbol === second.symbol) {
+        playSound('match');
+        first.card.classList.add('matched');
+        second.card.classList.add('matched');
+        matchedPairs++;
+        document.getElementById('pairs-val').textContent = `${matchedPairs} / ${symbols.length}`;
+        flippedCards = [];
+        isLock = false;
+
+        if (matchedPairs === symbols.length) {
+          setTimeout(() => endGame(true), 500);
+        }
+      } else {
+        lives--;
+        document.getElementById('lives-val').textContent = lives;
+
+        setTimeout(() => {
+          first.card.classList.remove('flipped');
+          second.card.classList.remove('flipped');
+          flippedCards = [];
+          isLock = false;
+
+          if (lives <= 0) {
+            endGame(false);
+          }
+        }, 1000);
+      }
+    }
+
+    function endGame(isWin) {
+      const title = document.getElementById('result-title');
+      const desc = document.getElementById('result-desc');
+
+      if (isWin) {
+        playSound('win');
+        title.textContent = 'Победа!';
+        title.className = 'result-title win-title';
+        desc.textContent = `Отличная память! Ты нашел все пары и сохранил ${lives} жизней.`;
+      } else {
+        playSound('lose');
+        title.textContent = 'Поражение';
+        title.className = 'result-title lose-title';
+        desc.textContent = 'Жизни закончились. Попробуй ещё раз!';
+      }
+
+      showScreen('end-screen');
+    }
+  </script>
+</body>
+</html>
